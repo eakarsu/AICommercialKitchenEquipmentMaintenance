@@ -1,0 +1,104 @@
+{
+  "project": "AICommercialKitchenEquipmentMaintenance",
+  "marker": "// === Batch 01 Gaps & Frontend Mounts ===",
+  "features": [
+    {
+      "slug": "agentic-field-service-dispatcher-routing-jobs-by-s",
+      "component": "AgenticFieldServiceDispatcherRoutingJobsBySPage",
+      "label": "Agentic field-service dispatcher routing jobs by SLA, parts on truck, and skill",
+      "endpoint": "/api/cf-agentic-field-service-dispatcher-routing-jobs-by-s",
+      "kind": "cfs"
+    },
+    {
+      "slug": "rag-over-oem-manuals-hobart-vulcan-hoshizaki-for-i",
+      "component": "RagOverOemManualsHobartVulcanHoshizakiForIPage",
+      "label": "RAG over OEM manuals (Hobart, Vulcan, Hoshizaki) for instant troubleshooting",
+      "endpoint": "/api/cf-rag-over-oem-manuals-hobart-vulcan-hoshizaki-for-i",
+      "kind": "cfs"
+    },
+    {
+      "slug": "real-time-iot-telemetry-from-kitchen-equipment-wit",
+      "component": "RealTimeIotTelemetryFromKitchenEquipmentWitPage",
+      "label": "Real-time IoT telemetry from kitchen equipment with proactive repair tickets",
+      "endpoint": "/api/cf-real-time-iot-telemetry-from-kitchen-equipment-wit",
+      "kind": "cfs"
+    },
+    {
+      "slug": "white-label-deployment-for-kitchen-equipment-manuf",
+      "component": "WhiteLabelDeploymentForKitchenEquipmentManufPage",
+      "label": "White-label deployment for kitchen-equipment manufacturers offering managed service",
+      "endpoint": "/api/cf-white-label-deployment-for-kitchen-equipment-manuf",
+      "kind": "cfs"
+    },
+    {
+      "slug": "0-mounted-chat-style-ai-endpoints-despite-aicenter",
+      "component": "Gap0MountedChatStyleAiEndpointsDespiteAicenterPage",
+      "label": "0 mounted /chat-style AI endpoints despite aiCenter.js / aiNew.js scaffolds",
+      "endpoint": "/api/gap-0-mounted-chat-style-ai-endpoints-despite-aicenter",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-ai-diagnostic-from-photo-error-code-lookup",
+      "component": "NoAiDiagnosticFromPhotoErrorCodeLookupPage",
+      "label": "No AI diagnostic from photo / error-code lookup",
+      "endpoint": "/api/gap-no-ai-diagnostic-from-photo-error-code-lookup",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-ai-predictive-failure-model-from-equipment-tele",
+      "component": "NoAiPredictiveFailureModelFromEquipmentTelePage",
+      "label": "No AI predictive-failure model from equipment telemetry",
+      "endpoint": "/api/gap-no-ai-predictive-failure-model-from-equipment-tele",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-ai-service-manual-q-a-for-technicians",
+      "component": "NoAiServiceManualQAForTechniciansPage",
+      "label": "No AI service-manual Q&A for technicians",
+      "endpoint": "/api/gap-no-ai-service-manual-q-a-for-technicians",
+      "kind": "gap"
+    },
+    {
+      "slug": "notification-routes-exist-but-no-sms-push-delivery",
+      "component": "NotificationRoutesExistButNoSmsPushDeliveryPage",
+      "label": "Notification routes exist but no SMS/push delivery channel",
+      "endpoint": "/api/gap-notification-routes-exist-but-no-sms-push-delivery",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-direct-fsm-platform-api-client-servicetitan-hou",
+      "component": "NoDirectFsmPlatformApiClientServicetitanHouPage",
+      "label": "No direct FSM platform API client (ServiceTitan, Housecall Pro)",
+      "endpoint": "/api/gap-no-direct-fsm-platform-api-client-servicetitan-hou",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-supplier-order-workflow-on-parts-catalog",
+      "component": "NoSupplierOrderWorkflowOnPartsCatalogPage",
+      "label": "No supplier order workflow on parts catalog",
+      "endpoint": "/api/gap-no-supplier-order-workflow-on-parts-catalog",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-mobile-technician-app-with-offline-mode",
+      "component": "NoMobileTechnicianAppWithOfflineModePage",
+      "label": "No mobile technician app with offline mode",
+      "endpoint": "/api/gap-no-mobile-technician-app-with-offline-mode",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-customer-self-service-repair-request-portal",
+      "component": "NoCustomerSelfServiceRepairRequestPortalPage",
+      "label": "No customer self-service repair-request portal",
+      "endpoint": "/api/gap-no-customer-self-service-repair-request-portal",
+      "kind": "gap"
+    },
+    {
+      "slug": "no-iot-telemetry-stream-ingestion",
+      "component": "NoIotTelemetryStreamIngestionPage",
+      "label": "No IoT telemetry stream ingestion",
+      "endpoint": "/api/gap-no-iot-telemetry-stream-ingestion",
+      "kind": "gap"
+    }
+  ]
+}

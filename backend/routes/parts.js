@@ -2,20 +2,56 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const authMiddleware = require('../middleware/auth');
+const rateLimiter = require('../middleware/rateLimiter');
 const { queryAI } = require('../openrouter');
 
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
-// GET / - List all parts
+// GET / - List all parts with pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM parts_inventory');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(
-      'SELECT * FROM parts_inventory ORDER BY name ASC'
+      'SELECT * FROM parts_inventory ORDER BY name ASC LIMIT $1 OFFSET $2',
+      [limit, offset]
     );
-    res.json(result.rows);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching parts:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// GET /low-stock - Parts below reorder threshold
+router.get('/low-stock', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM parts_inventory WHERE quantity <= minimum_stock'
+    );
+    const total = parseInt(countResult.rows[0].count);
+
+    const result = await pool.query(
+      `SELECT *, (minimum_stock - quantity) AS shortage
+       FROM parts_inventory
+       WHERE quantity <= minimum_stock
+       ORDER BY (quantity::float / NULLIF(minimum_stock, 0)) ASC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('Error fetching low-stock parts:', err);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });
@@ -141,7 +177,47 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST /:id/ai-reorder - AI reorder prediction
+// PUT /:id/reorder - Mark part as ordered with expected delivery date
+router.put('/:id/reorder', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity_ordered, expected_delivery_date, supplier, notes } = req.body;
+
+    if (!quantity_ordered || quantity_ordered <= 0) {
+      return res.status(400).json({ error: 'quantity_ordered must be a positive number' });
+    }
+
+    const partResult = await pool.query('SELECT * FROM parts_inventory WHERE id = $1', [id]);
+    if (partResult.rows.length === 0) return res.status(404).json({ error: 'Part not found.' });
+
+    const result = await pool.query(
+      `UPDATE parts_inventory SET
+         status = 'on_order',
+         last_ordered = NOW(),
+         supplier = COALESCE($1, supplier),
+         notes = CASE WHEN $2::text IS NOT NULL THEN $2 ELSE notes END,
+         updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [supplier || null, notes || null, id]
+    );
+
+    res.json({
+      part: result.rows[0],
+      reorder_details: {
+        quantity_ordered,
+        ordered_at: new Date().toISOString(),
+        expected_delivery_date: expected_delivery_date || null,
+        supplier: supplier || result.rows[0].supplier
+      }
+    });
+  } catch (err) {
+    console.error('Error marking part as ordered:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /ai-reorder - AI reorder prediction
 router.post('/:id/ai-reorder', async (req, res) => {
   try {
     const { id } = req.params;

@@ -112,4 +112,33 @@ export const api = {
   aiEnergyAdvisor: (data) => request('/ai-center/energy-advisor', { method: 'POST', body: JSON.stringify(data) }),
   aiReportGenerator: (data) => request('/ai-center/report-generator', { method: 'POST', body: JSON.stringify(data) }),
   aiSmartChat: (data) => request('/ai-center/smart-chat', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Advanced AI Lab (NEW custom non-CRUD features)
+  aiFailureModeAnalysis: (data) => request('/ai/failure-mode-analysis', { method: 'POST', body: JSON.stringify(data) }),
+  aiPartsObsolescence: (data) => request('/ai/parts-obsolescence', { method: 'POST', body: JSON.stringify(data) }),
+  aiAdvancedComplianceCheck: (data) => request('/ai/compliance-check', { method: 'POST', body: JSON.stringify(data) }),
+  aiWorkOrderSummarizer: (data) => request('/ai/work-order-summarizer', { method: 'POST', body: JSON.stringify(data) }),
+  aiVendorSelectionAdvisor: (data) => request('/ai/vendor-selection-advisor', { method: 'POST', body: JSON.stringify(data) }),
+  aiPredictiveFailure: (data) => request('/ai-center/predictive-analytics', { method: 'POST', body: JSON.stringify(data) }),
+  aiAutoPartsOrder: (data) => request('/ai-center/cost-optimizer', { method: 'POST', body: JSON.stringify(data) }),
+  aiTechnicianOptimizer: (data) => request('/ai-center/smart-chat', { method: 'POST', body: JSON.stringify(data) }),
+  aiEnergyCostAnalyzer: (data) => request('/ai-center/energy-advisor', { method: 'POST', body: JSON.stringify(data) }),
+  aiWarrantyManager: (data) => request('/ai-center/report-generator', { method: 'POST', body: JSON.stringify(data) }),
+  aiMaintenanceHistoryDashboard: (data) => request('/ai-center/report-generator', { method: 'POST', body: JSON.stringify(data) }),
+  aiComplianceAuditGenerator: (data) => request('/ai-center/compliance-checker', { method: 'POST', body: JSON.stringify(data) }),
+  aiRemoteDiagnostic: (data) => request('/ai-center/diagnostic-assistant', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Notifications
+  getNotifications: () => request('/notifications'),
+  getNotificationsUnreadCount: () => request('/notifications/unread-count'),
+  createNotification: (data) => request('/notifications', { method: 'POST', body: JSON.stringify(data) }),
+  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'PUT' }),
+  markAllNotificationsRead: () => request('/notifications/mark-all-read', { method: 'POST' }),
+  deleteNotification: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
+
+  // Webhooks
+  getWebhooks: () => request('/webhooks'),
+  createWebhook: (data) => request('/webhooks', { method: 'POST', body: JSON.stringify(data) }),
+  deleteWebhook: (id) => request(`/webhooks/${id}`, { method: 'DELETE' }),
+  testWebhook: (id, payload) => request(`/webhooks/${id}/test`, { method: 'POST', body: JSON.stringify(payload || { event: 'test', payload: { hello: 'world' } }) }),
 };

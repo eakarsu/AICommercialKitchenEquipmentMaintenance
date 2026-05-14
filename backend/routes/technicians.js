@@ -2,21 +2,78 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const auth = require('../middleware/auth');
+const rateLimiter = require('../middleware/rateLimiter');
 const { queryAI } = require('../openrouter');
 
 // Apply auth middleware to all routes
 router.use(auth);
 
-// GET / - List all technicians
+// GET / - List all technicians with pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM technicians');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(
-      'SELECT * FROM technicians ORDER BY name ASC'
+      'SELECT * FROM technicians ORDER BY name ASC LIMIT $1 OFFSET $2',
+      [limit, offset]
     );
-    res.json(result.rows);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching technicians:', err);
     res.status(500).json({ error: 'Failed to fetch technicians' });
+  }
+});
+
+// GET /expiring-certs - Technicians with certifications expiring in next 90 days
+router.get('/expiring-certs', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+    const days = Math.min(365, Math.max(1, parseInt(req.query.days) || 90));
+
+    // Try technician_certifications table first; fall back to certification field on technicians
+    let result, total;
+    try {
+      const countResult = await pool.query(`
+        SELECT COUNT(*) FROM technician_certifications
+        WHERE expiry_date IS NOT NULL
+          AND expiry_date BETWEEN NOW() AND NOW() + INTERVAL '${days} days'
+      `);
+      total = parseInt(countResult.rows[0].count);
+
+      const queryResult = await pool.query(`
+        SELECT tc.*, t.name AS technician_name, t.email, t.phone, t.specialization
+        FROM technician_certifications tc
+        LEFT JOIN technicians t ON tc.technician_id = t.id
+        WHERE tc.expiry_date IS NOT NULL
+          AND tc.expiry_date BETWEEN NOW() AND NOW() + INTERVAL '${days} days'
+        ORDER BY tc.expiry_date ASC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset]);
+
+      result = queryResult.rows;
+    } catch (tableErr) {
+      // Fallback: parse expiry from technicians.certification JSON or text field
+      const countResult = await pool.query('SELECT COUNT(*) FROM technicians WHERE certification IS NOT NULL');
+      total = parseInt(countResult.rows[0].count);
+
+      const queryResult = await pool.query(
+        'SELECT * FROM technicians WHERE certification IS NOT NULL ORDER BY name ASC LIMIT $1 OFFSET $2',
+        [limit, offset]
+      );
+      result = queryResult.rows;
+    }
+
+    res.json({ data: result, total, page, limit, totalPages: Math.ceil(total / limit), days_window: days });
+  } catch (err) {
+    console.error('Error fetching expiring certifications:', err);
+    res.status(500).json({ error: 'Failed to fetch expiring certifications' });
   }
 });
 
@@ -131,6 +188,61 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting technician:', err);
     res.status(500).json({ error: 'Failed to delete technician' });
+  }
+});
+
+// POST /:id/certifications - Add certification with expiry date
+router.post('/:id/certifications', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { certification_name, issuing_body, issued_date, expiry_date, certification_number, notes } = req.body;
+
+    if (!certification_name) return res.status(400).json({ error: 'certification_name is required' });
+    if (!expiry_date) return res.status(400).json({ error: 'expiry_date is required' });
+
+    const techResult = await pool.query('SELECT * FROM technicians WHERE id = $1', [id]);
+    if (techResult.rows.length === 0) return res.status(404).json({ error: 'Technician not found' });
+
+    // Try inserting into technician_certifications table first
+    let certRecord;
+    try {
+      const result = await pool.query(`
+        INSERT INTO technician_certifications
+          (technician_id, certification_name, issuing_body, issued_date, expiry_date, certification_number, notes, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING *
+      `, [id, certification_name, issuing_body || null, issued_date || null, expiry_date, certification_number || null, notes || null]);
+      certRecord = result.rows[0];
+    } catch (tableErr) {
+      // Fallback: update certification field on technicians table
+      const tech = techResult.rows[0];
+      let existingCerts = [];
+      try { existingCerts = JSON.parse(tech.certification || '[]'); } catch (_) {
+        existingCerts = tech.certification ? [{ name: tech.certification }] : [];
+      }
+      existingCerts.push({ name: certification_name, issuing_body, issued_date, expiry_date, certification_number, notes });
+
+      const updateResult = await pool.query(
+        `UPDATE technicians SET certification = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+        [JSON.stringify(existingCerts), id]
+      );
+      certRecord = { technician_id: id, certification_name, expiry_date, stored_in: 'technicians.certification' };
+    }
+
+    // Update technician's main certification field as well
+    await pool.query(
+      `UPDATE technicians SET certification = $1, updated_at = NOW() WHERE id = $2`,
+      [certification_name, id]
+    ).catch(() => {}); // non-critical
+
+    res.status(201).json({
+      technician_id: parseInt(id),
+      technician_name: techResult.rows[0].name,
+      certification: certRecord
+    });
+  } catch (err) {
+    console.error('Error adding certification:', err);
+    res.status(500).json({ error: 'Failed to add certification' });
   }
 });
 

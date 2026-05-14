@@ -13,6 +13,8 @@ import {
   HiCurrencyDollar,
   HiUsers,
   HiSparkles,
+  HiBeaker,
+  HiBell,
   HiArrowRightOnRectangle,
   HiChevronLeft,
   HiChevronRight,
@@ -33,7 +35,15 @@ const navItems = [
   { label: 'Technicians', path: '/technicians', icon: HiUsers },
 ];
 
-const aiItem = { label: 'AI Center', path: '/ai-center', icon: HiSparkles };
+const aiItems = [
+  { label: 'AI Center', path: '/ai-center', icon: HiSparkles },
+  { label: 'AI Lab', path: '/ai-lab', icon: HiBeaker },
+];
+
+const systemItems = [
+  { label: 'Notifications', path: '/notifications', icon: HiBell },
+  { label: 'Webhooks', path: '/webhooks', icon: HiBolt },
+];
 
 const routeTitles = {
   '/': 'Dashboard',
@@ -48,6 +58,9 @@ const routeTitles = {
   '/costs': 'Cost Analytics',
   '/technicians': 'Technicians',
   '/ai-center': 'AI Center',
+  '/ai-lab': 'AI Lab',
+  '/notifications': 'Notifications',
+  '/webhooks': 'Webhooks',
 };
 
 export default function Layout({ children, user, onLogout }) {
@@ -118,11 +131,42 @@ export default function Layout({ children, user, onLogout }) {
           {/* Divider */}
           <div className="my-3 mx-3 border-t border-slate-700/50" />
 
-          {/* AI Center */}
-          {(() => {
+          {/* System Items */}
+          {systemItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative
+                  ${active
+                    ? 'bg-violet-500/15 text-violet-300'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  }`}
+                title={collapsed ? item.label : undefined}
+              >
+                {active && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-violet-400 rounded-r" />
+                )}
+                <Icon className={`text-lg flex-shrink-0 transition-colors duration-200 ${active ? 'text-violet-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                {!collapsed && (
+                  <span className="whitespace-nowrap overflow-hidden">{item.label}</span>
+                )}
+              </Link>
+            );
+          })}
+
+          {/* Divider */}
+          <div className="my-3 mx-3 border-t border-slate-700/50" />
+
+          {/* AI Items */}
+          {aiItems.map((aiItem) => {
+            const Icon = aiItem.icon;
             const active = isActive(aiItem.path);
             return (
               <Link
+                key={aiItem.path}
                 to={aiItem.path}
                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative
                   ${active
@@ -135,16 +179,16 @@ export default function Layout({ children, user, onLogout }) {
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gradient-to-b from-violet-400 to-purple-400 rounded-r" />
                 )}
                 <div className={`p-0.5 rounded-md flex-shrink-0 ${active ? 'bg-gradient-to-br from-violet-500 to-purple-600' : 'bg-gradient-to-br from-violet-600/50 to-purple-600/50 group-hover:from-violet-500 group-hover:to-purple-500'} transition-all duration-200`}>
-                  <HiSparkles className="text-sm text-white" />
+                  <Icon className="text-sm text-white" />
                 </div>
                 {!collapsed && (
                   <span className="whitespace-nowrap overflow-hidden bg-gradient-to-r from-violet-300 to-purple-300 bg-clip-text text-transparent font-semibold">
-                    AI Center
+                    {aiItem.label}
                   </span>
                 )}
               </Link>
             );
-          })()}
+          })}
         </nav>
 
         {/* Collapse Toggle */}

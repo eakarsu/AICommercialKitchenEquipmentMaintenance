@@ -7,13 +7,21 @@ const { queryAI } = require('../openrouter');
 // Apply auth middleware to all routes
 router.use(auth);
 
-// GET / - List all equipment
+// GET / - List all equipment with pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM equipment');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(
-      'SELECT * FROM equipment ORDER BY created_at DESC'
+      'SELECT * FROM equipment ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
     );
-    res.json(result.rows);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching equipment:', err);
     res.status(500).json({ error: 'Failed to fetch equipment' });
