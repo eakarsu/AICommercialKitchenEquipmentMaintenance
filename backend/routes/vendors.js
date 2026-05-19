@@ -7,13 +7,21 @@ const { queryAI } = require('../openrouter');
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
-// GET / - List all vendors
+// GET / - List all vendors with pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM vendors');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(
-      'SELECT * FROM vendors ORDER BY name ASC'
+      'SELECT * FROM vendors ORDER BY name ASC LIMIT $1 OFFSET $2',
+      [limit, offset]
     );
-    res.json(result.rows);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching vendors:', err);
     res.status(500).json({ error: 'Internal server error.' });

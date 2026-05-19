@@ -2,21 +2,159 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const auth = require('../middleware/auth');
+const rateLimiter = require('../middleware/rateLimiter');
 const { queryAI } = require('../openrouter');
 
 // Apply auth middleware to all routes
 router.use(auth);
 
-// GET / - List all cost records with equipment details
+// GET /by-equipment - Total maintenance cost per equipment item
+router.get('/by-equipment', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query(
+      'SELECT COUNT(DISTINCT equipment_id) FROM cost_records WHERE equipment_id IS NOT NULL'
+    );
+    const total = parseInt(countResult.rows[0].count);
+
+    const result = await pool.query(`
+      SELECT
+        e.id AS equipment_id,
+        e.name AS equipment_name,
+        e.type AS equipment_type,
+        e.location,
+        e.status AS equipment_status,
+        COUNT(cr.id) AS record_count,
+        SUM(cr.amount) AS total_cost,
+        SUM(cr.labor_cost) AS total_labor_cost,
+        SUM(cr.parts_cost) AS total_parts_cost,
+        AVG(cr.amount) AS avg_cost_per_record,
+        MIN(cr.date) AS first_cost_date,
+        MAX(cr.date) AS last_cost_date,
+        json_agg(json_build_object('category', cr.category, 'amount', cr.amount) ORDER BY cr.date DESC) FILTER (WHERE cr.id IS NOT NULL) AS cost_breakdown
+      FROM cost_records cr
+      LEFT JOIN equipment e ON cr.equipment_id = e.id
+      WHERE cr.equipment_id IS NOT NULL
+      GROUP BY e.id, e.name, e.type, e.location, e.status
+      ORDER BY total_cost DESC NULLS LAST
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('Error fetching costs by equipment:', err);
+    res.status(500).json({ error: 'Failed to fetch costs by equipment' });
+  }
+});
+
+// POST /ai-roi - AI analyzes cost history, recommends repair vs replace per equipment
+router.post('/ai-roi', rateLimiter, async (req, res) => {
+  try {
+    // Get total cost per equipment
+    const equipmentCosts = await pool.query(`
+      SELECT
+        e.id AS equipment_id,
+        e.name AS equipment_name,
+        e.type AS equipment_type,
+        e.location,
+        e.status AS equipment_status,
+        e.purchase_date,
+        e.purchase_price,
+        e.manufacturer,
+        e.model,
+        COUNT(cr.id) AS maintenance_events,
+        SUM(cr.amount) AS total_maintenance_cost,
+        SUM(cr.labor_cost) AS total_labor,
+        SUM(cr.parts_cost) AS total_parts,
+        MAX(cr.date) AS last_maintenance_date,
+        json_agg(
+          json_build_object('date', cr.date, 'category', cr.category, 'amount', cr.amount, 'description', cr.description)
+          ORDER BY cr.date DESC
+        ) FILTER (WHERE cr.id IS NOT NULL) AS recent_costs
+      FROM equipment e
+      LEFT JOIN cost_records cr ON e.id = cr.equipment_id
+      GROUP BY e.id, e.name, e.type, e.location, e.status, e.purchase_date, e.purchase_price, e.manufacturer, e.model
+      ORDER BY total_maintenance_cost DESC NULLS LAST
+    `);
+
+    const systemPrompt = `You are an expert equipment lifecycle financial analyst specializing in commercial kitchen equipment. Analyze maintenance cost histories and provide repair vs replace recommendations with ROI calculations. Return valid JSON only.`;
+
+    const userPrompt = `Analyze the maintenance cost history for all commercial kitchen equipment and provide repair vs replace recommendations.
+
+Equipment Cost Analysis (${equipmentCosts.rows.length} items):
+${JSON.stringify(equipmentCosts.rows.map(e => ({
+  equipment_id: e.equipment_id,
+  name: e.equipment_name,
+  type: e.equipment_type,
+  status: e.equipment_status,
+  purchase_date: e.purchase_date,
+  purchase_price: e.purchase_price,
+  maintenance_events: e.maintenance_events,
+  total_maintenance_cost: e.total_maintenance_cost,
+  total_labor: e.total_labor,
+  total_parts: e.total_parts,
+  last_maintenance: e.last_maintenance_date,
+  recent_costs: (e.recent_costs || []).slice(0, 5)
+})), null, 2)}
+
+Return a JSON object with:
+- fleet_roi_summary (object with: total_fleet_value, total_maintenance_spend, maintenance_to_value_ratio)
+- equipment_recommendations (array of {
+    equipment_id, equipment_name, recommendation: "repair"|"replace"|"monitor",
+    reasoning, estimated_replacement_cost_usd, projected_savings_5yr,
+    repair_roi_score (0-100), urgency: "immediate"|"within_6mo"|"next_year"|"monitor",
+    replacement_priority_rank
+  })
+- top_replacement_candidates (array of equipment names, ranked by urgency)
+- total_replacement_budget_estimate (number)
+- cost_reduction_opportunities (array of string recommendations)
+- executive_summary (string)`;
+
+    const aiResult = await queryAI(systemPrompt, userPrompt);
+
+    let analysis = null;
+    if (aiResult.success) {
+      try {
+        const cleaned = aiResult.response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (match) analysis = JSON.parse(match[0]);
+        else analysis = { raw_response: aiResult.response };
+      } catch { analysis = { raw_response: aiResult.response }; }
+    }
+
+    res.json({
+      equipment_count: equipmentCosts.rows.length,
+      ai_roi_analysis: analysis,
+      ai_metadata: { success: aiResult.success, model: aiResult.model, usage: aiResult.usage },
+      generated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Error generating AI ROI analysis:', err);
+    res.status(500).json({ error: 'Failed to generate AI ROI analysis' });
+  }
+});
+
+// GET / - List all cost records with equipment details and pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM cost_records');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(`
       SELECT cr.*, e.name AS equipment_name
       FROM cost_records cr
       LEFT JOIN equipment e ON cr.equipment_id = e.id
       ORDER BY cr.date DESC
-    `);
-    res.json(result.rows);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching cost records:', err);
     res.status(500).json({ error: 'Failed to fetch cost records' });

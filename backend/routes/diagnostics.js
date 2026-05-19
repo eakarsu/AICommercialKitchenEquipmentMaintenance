@@ -7,16 +7,24 @@ const { queryAI } = require('../openrouter');
 // Apply auth middleware to all routes
 router.use(auth);
 
-// GET / - List all diagnostic logs with equipment details
+// GET / - List all diagnostic logs with equipment details and pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM diagnostic_logs');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(`
       SELECT dl.*, e.name AS equipment_name
       FROM diagnostic_logs dl
       LEFT JOIN equipment e ON dl.equipment_id = e.id
       ORDER BY dl.created_at DESC
-    `);
-    res.json(result.rows);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching diagnostic logs:', err);
     res.status(500).json({ error: 'Failed to fetch diagnostic logs' });

@@ -7,16 +7,24 @@ const { queryAI } = require('../openrouter');
 // Apply auth middleware to all routes
 router.use(auth);
 
-// GET / - List all maintenance schedules with equipment details
+// GET / - List all maintenance schedules with equipment details and pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM maintenance_schedules');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(`
       SELECT ms.*, e.name AS equipment_name
       FROM maintenance_schedules ms
       LEFT JOIN equipment e ON ms.equipment_id = e.id
       ORDER BY ms.next_due ASC
-    `);
-    res.json(result.rows);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching maintenance schedules:', err);
     res.status(500).json({ error: 'Failed to fetch maintenance schedules' });

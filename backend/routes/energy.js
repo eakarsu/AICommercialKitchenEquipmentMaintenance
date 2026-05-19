@@ -2,21 +2,152 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const auth = require('../middleware/auth');
+const rateLimiter = require('../middleware/rateLimiter');
 const { queryAI } = require('../openrouter');
 
 // Apply auth middleware to all routes
 router.use(auth);
 
-// GET / - List all energy logs with equipment details
+// GET /by-equipment - Energy consumption aggregated per equipment item
+router.get('/by-equipment', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query(`
+      SELECT COUNT(DISTINCT el.equipment_id) FROM energy_logs el
+    `);
+    const total = parseInt(countResult.rows[0].count);
+
+    const result = await pool.query(`
+      SELECT
+        e.id AS equipment_id,
+        e.name AS equipment_name,
+        e.type AS equipment_type,
+        e.location,
+        COUNT(el.id) AS log_count,
+        SUM(el.energy_consumption) AS total_kwh,
+        AVG(el.energy_consumption) AS avg_kwh_per_reading,
+        SUM(el.cost) AS total_cost,
+        AVG(el.cost) AS avg_cost_per_reading,
+        AVG(el.efficiency_rating) AS avg_efficiency_rating,
+        SUM(el.operating_hours) AS total_operating_hours,
+        MAX(el.reading_date) AS last_reading_date,
+        COUNT(CASE WHEN el.anomaly_detected THEN 1 END) AS anomaly_count
+      FROM energy_logs el
+      LEFT JOIN equipment e ON el.equipment_id = e.id
+      GROUP BY e.id, e.name, e.type, e.location
+      ORDER BY total_kwh DESC NULLS LAST
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('Error fetching energy by equipment:', err);
+    res.status(500).json({ error: 'Failed to fetch energy by equipment' });
+  }
+});
+
+// POST /ai-optimize - AI analyzes fleet-level consumption, returns savings recommendations
+router.post('/ai-optimize', rateLimiter, async (req, res) => {
+  try {
+    // Fetch per-equipment energy aggregates
+    const equipmentEnergy = await pool.query(`
+      SELECT
+        e.id AS equipment_id,
+        e.name AS equipment_name,
+        e.type AS equipment_type,
+        e.location,
+        COUNT(el.id) AS log_count,
+        SUM(el.energy_consumption) AS total_kwh,
+        AVG(el.energy_consumption) AS avg_kwh_per_reading,
+        SUM(el.cost) AS total_cost,
+        AVG(el.efficiency_rating) AS avg_efficiency_rating,
+        SUM(el.operating_hours) AS total_operating_hours,
+        COUNT(CASE WHEN el.anomaly_detected THEN 1 END) AS anomaly_count
+      FROM energy_logs el
+      LEFT JOIN equipment e ON el.equipment_id = e.id
+      GROUP BY e.id, e.name, e.type, e.location
+      ORDER BY total_kwh DESC NULLS LAST
+    `);
+
+    const overallStats = await pool.query(`
+      SELECT
+        SUM(energy_consumption) AS total_kwh,
+        SUM(cost) AS total_cost,
+        AVG(efficiency_rating) AS avg_efficiency,
+        COUNT(*) AS total_readings,
+        COUNT(CASE WHEN anomaly_detected THEN 1 END) AS total_anomalies
+      FROM energy_logs
+    `);
+
+    const systemPrompt = `You are an expert energy efficiency analyst for commercial kitchen equipment. Analyze fleet-wide energy consumption data and provide comprehensive optimization recommendations. Return valid JSON only.`;
+
+    const userPrompt = `Analyze the fleet-wide energy consumption for this commercial kitchen operation and provide optimization recommendations.
+
+Overall Statistics:
+${JSON.stringify(overallStats.rows[0], null, 2)}
+
+Per-Equipment Energy Breakdown (${equipmentEnergy.rows.length} items):
+${JSON.stringify(equipmentEnergy.rows, null, 2)}
+
+Return a JSON object with:
+- fleet_efficiency_score (0-100)
+- total_estimated_monthly_cost_usd (number)
+- top_consumers (array of {equipment_name, total_kwh, pct_of_fleet})
+- optimization_recommendations (array of {equipment_name, action, estimated_savings_kwh, estimated_savings_usd_monthly, priority: "high"|"medium"|"low"})
+- eco_alternatives (array of {equipment_name, alternative, savings_percent, certification})
+- carbon_footprint (object with: total_kg_co2, equivalent_trees, reduction_potential_percent)
+- anomaly_alerts (array of {equipment_name, anomaly_count, recommended_action})
+- scheduling_optimizations (array of string tips for off-peak scheduling)
+- roi_summary (object with: total_investment_estimate, annual_savings_potential, payback_years)
+- executive_summary (string)`;
+
+    const aiResult = await queryAI(systemPrompt, userPrompt);
+
+    let analysis = null;
+    if (aiResult.success) {
+      try {
+        const cleaned = aiResult.response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (match) analysis = JSON.parse(match[0]);
+        else analysis = { raw_response: aiResult.response };
+      } catch { analysis = { raw_response: aiResult.response }; }
+    }
+
+    res.json({
+      overall_stats: overallStats.rows[0],
+      equipment_count: equipmentEnergy.rows.length,
+      per_equipment: equipmentEnergy.rows,
+      ai_optimization: analysis,
+      ai_metadata: { success: aiResult.success, model: aiResult.model, usage: aiResult.usage },
+      generated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Error generating fleet energy optimization:', err);
+    res.status(500).json({ error: 'Failed to generate AI energy optimization' });
+  }
+});
+
+// GET / - List all energy logs with equipment details and pagination
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM energy_logs');
+    const total = parseInt(countResult.rows[0].count);
+
     const result = await pool.query(`
       SELECT el.*, e.name AS equipment_name
       FROM energy_logs el
       LEFT JOIN equipment e ON el.equipment_id = e.id
       ORDER BY el.reading_date DESC
-    `);
-    res.json(result.rows);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+    res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('Error fetching energy logs:', err);
     res.status(500).json({ error: 'Failed to fetch energy logs' });
