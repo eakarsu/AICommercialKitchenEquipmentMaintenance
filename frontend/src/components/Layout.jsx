@@ -15,6 +15,7 @@ import {
   HiSparkles,
   HiBeaker,
   HiBell,
+  HiSquares2X2,
   HiArrowRightOnRectangle,
   HiChevronLeft,
   HiChevronRight,
@@ -33,6 +34,7 @@ const navItems = [
   { label: 'Energy', path: '/energy', icon: HiBolt },
   { label: 'Cost Analytics', path: '/costs', icon: HiCurrencyDollar },
   { label: 'Technicians', path: '/technicians', icon: HiUsers },
+  { label: 'Kitchen Views', path: '/custom-views', icon: HiSquares2X2 },
 ];
 
 const aiItems = [
@@ -57,6 +59,7 @@ const routeTitles = {
   '/energy': 'Energy',
   '/costs': 'Cost Analytics',
   '/technicians': 'Technicians',
+  '/custom-views': 'Kitchen Views',
   '/ai-center': 'AI Center',
   '/ai-lab': 'AI Lab',
   '/notifications': 'Notifications',

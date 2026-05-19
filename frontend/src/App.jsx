@@ -17,6 +17,7 @@ import AICenterPage from './pages/AICenterPage';
 import AILabPage from './pages/AILabPage';
 import NotificationsPage from './pages/NotificationsPage';
 import WebhooksPage from './pages/WebhooksPage';
+import CustomViewsPage from './pages/CustomViewsPage';
 import { Toaster } from 'react-hot-toast';
 
 export default function App() {
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/ai-lab" element={<AILabPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/webhooks" element={<WebhooksPage />} />
+          <Route path="/custom-views" element={<CustomViewsPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>

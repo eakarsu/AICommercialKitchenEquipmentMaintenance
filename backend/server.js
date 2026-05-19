@@ -25,6 +25,7 @@ app.use('/api/ai', require('./routes/aiNew'));
 // Audit-recommended additions (notifications, webhooks)
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/webhooks', require('./routes/webhooks'));
+app.use('/api/custom-views', require('./routes/customViews'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -54,3 +55,8 @@ app.use('/api/gap-no-supplier-order-workflow-on-parts-catalog', require('./route
 app.use('/api/gap-no-mobile-technician-app-with-offline-mode', require('./routes/gap_no_mobile_technician_app_with_offline_mode'));
 app.use('/api/gap-no-customer-self-service-repair-request-portal', require('./routes/gap_no_customer_self_service_repair_request_portal'));
 app.use('/api/gap-no-iot-telemetry-stream-ingestion', require('./routes/gap_no_iot_telemetry_stream_ingestion'));
+
+// 404 (registered last so custom-views is reachable above)
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found', path: req.originalUrl });
+});
