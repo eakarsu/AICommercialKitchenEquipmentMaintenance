@@ -127,6 +127,7 @@ export const api = {
   aiMaintenanceHistoryDashboard: (data) => request('/ai-center/report-generator', { method: 'POST', body: JSON.stringify(data) }),
   aiComplianceAuditGenerator: (data) => request('/ai-center/compliance-checker', { method: 'POST', body: JSON.stringify(data) }),
   aiRemoteDiagnostic: (data) => request('/ai-center/diagnostic-assistant', { method: 'POST', body: JSON.stringify(data) }),
+  aiPartsTriage: (data) => request('/ai/parts-triage', { method: 'POST', body: JSON.stringify(data) }),
 
   // Notifications
   getNotifications: () => request('/notifications'),

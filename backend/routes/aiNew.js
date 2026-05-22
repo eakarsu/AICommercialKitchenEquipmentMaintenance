@@ -392,4 +392,24 @@ Return JSON with:
   }
 });
 
+router.post('/parts-triage', rateLimiter, async (req, res) => {
+  const body = req.body || {};
+  const downtime = Number(body.downtime_hours || 0);
+  const partOnHand = Boolean(body.part_on_hand);
+  const rush = Boolean(body.rush_shipping_available);
+  const priority = downtime >= 8 || !partOnHand ? 'urgent' : 'standard';
+  res.json({
+    equipment_type: body.equipment_type || 'equipment',
+    symptom: body.symptom || 'symptom not specified',
+    priority,
+    recommended_part_action: partOnHand ? 'Reserve on-hand part and assign technician.' : rush ? 'Create rush supplier order and schedule provisional visit.' : 'Source substitute supplier and notify operations of downtime risk.',
+    technician_notes: [
+      'Verify model and serial before dispatch.',
+      'Bring universal gasket, sensor harness, and manufacturer service sheet when applicable.',
+      downtime >= 8 ? 'Escalate customer ETA communication.' : 'Keep standard service window.',
+    ],
+    generated_at: new Date().toISOString(),
+  });
+});
+
 module.exports = router;

@@ -18,7 +18,11 @@ import AILabPage from './pages/AILabPage';
 import NotificationsPage from './pages/NotificationsPage';
 import WebhooksPage from './pages/WebhooksPage';
 import CustomViewsPage from './pages/CustomViewsPage';
+import PartsTriagePage from './pages/PartsTriagePage';
 import { Toaster } from 'react-hot-toast';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -62,6 +66,9 @@ export default function App() {
       }} />
       <Layout user={user} onLogout={handleLogout}>
         <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
           <Route path="/" element={<Dashboard />} />
           <Route path="/equipment" element={<EquipmentPage />} />
           <Route path="/maintenance" element={<MaintenancePage />} />
@@ -75,6 +82,7 @@ export default function App() {
           <Route path="/technicians" element={<TechniciansPage />} />
           <Route path="/ai-center" element={<AICenterPage />} />
           <Route path="/ai-lab" element={<AILabPage />} />
+          <Route path="/parts-triage" element={<PartsTriagePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/webhooks" element={<WebhooksPage />} />
           <Route path="/custom-views" element={<CustomViewsPage />} />

@@ -35,6 +35,7 @@ const navItems = [
   { label: 'Cost Analytics', path: '/costs', icon: HiCurrencyDollar },
   { label: 'Technicians', path: '/technicians', icon: HiUsers },
   { label: 'Kitchen Views', path: '/custom-views', icon: HiSquares2X2 },
+  { label: 'Parts Triage', path: '/parts-triage', icon: HiCube },
 ];
 
 const aiItems = [
@@ -60,6 +61,7 @@ const routeTitles = {
   '/costs': 'Cost Analytics',
   '/technicians': 'Technicians',
   '/custom-views': 'Kitchen Views',
+  '/parts-triage': 'Parts Triage',
   '/ai-center': 'AI Center',
   '/ai-lab': 'AI Lab',
   '/notifications': 'Notifications',
