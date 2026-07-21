@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+require('./config/runtime').validateRuntime();
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 4000;
 
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map((value) => value.trim()).filter(Boolean);
+app.use(cors({ origin(origin, callback) { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed')); }, credentials: true }));
 app.use(express.json());
 
 // Routes
@@ -26,6 +28,7 @@ app.use('/api/ai', require('./routes/aiNew'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/webhooks', require('./routes/webhooks'));
 app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/governed-maintenance', require('./routes/governedMaintenance'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -43,18 +46,6 @@ app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });
 
-
-// === Batch 01 Gaps & Frontend Mounts ===
-app.use('/api/gap-0-mounted-chat-style-ai-endpoints-despite-aicenter', require('./routes/gap_0_mounted_chat_style_ai_endpoints_despite_aicenter'));
-app.use('/api/gap-no-ai-diagnostic-from-photo-error-code-lookup', require('./routes/gap_no_ai_diagnostic_from_photo_error_code_lookup'));
-app.use('/api/gap-no-ai-predictive-failure-model-from-equipment-tele', require('./routes/gap_no_ai_predictive_failure_model_from_equipment_tele'));
-app.use('/api/gap-no-ai-service-manual-q-a-for-technicians', require('./routes/gap_no_ai_service_manual_q_a_for_technicians'));
-app.use('/api/gap-notification-routes-exist-but-no-sms-push-delivery', require('./routes/gap_notification_routes_exist_but_no_sms_push_delivery'));
-app.use('/api/gap-no-direct-fsm-platform-api-client-servicetitan-hou', require('./routes/gap_no_direct_fsm_platform_api_client_servicetitan_hou'));
-app.use('/api/gap-no-supplier-order-workflow-on-parts-catalog', require('./routes/gap_no_supplier_order_workflow_on_parts_catalog'));
-app.use('/api/gap-no-mobile-technician-app-with-offline-mode', require('./routes/gap_no_mobile_technician_app_with_offline_mode'));
-app.use('/api/gap-no-customer-self-service-repair-request-portal', require('./routes/gap_no_customer_self_service_repair_request_portal'));
-app.use('/api/gap-no-iot-telemetry-stream-ingestion', require('./routes/gap_no_iot_telemetry_stream_ingestion'));
 
 // 404 (registered last so custom-views is reachable above)
 app.use((req, res) => {

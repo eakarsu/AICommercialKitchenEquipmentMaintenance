@@ -254,9 +254,10 @@ async function seed() {
 
     // --- USERS ---
     console.log('Seeding users...');
-    const adminHash = await bcrypt.hash('admin123', 10);
-    const managerHash = await bcrypt.hash('manager123', 10);
-    const techHash = await bcrypt.hash('tech123', 10);
+    if (!process.env.DEMO_ADMIN_PASSWORD || !process.env.DEMO_MANAGER_PASSWORD || !process.env.DEMO_TECH_PASSWORD) throw new Error('Explicit demo passwords are required');
+    const adminHash = await bcrypt.hash(process.env.DEMO_ADMIN_PASSWORD, 10);
+    const managerHash = await bcrypt.hash(process.env.DEMO_MANAGER_PASSWORD, 10);
+    const techHash = await bcrypt.hash(process.env.DEMO_TECH_PASSWORD, 10);
 
     await client.query(`
       INSERT INTO users (name, email, password, role) VALUES
