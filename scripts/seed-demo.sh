@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[ "${CONFIRM_DEMO_SEED:-}" = yes ] || { echo "Set CONFIRM_DEMO_SEED=yes" >&2; exit 1; }; root="$(cd "$(dirname "$0")/.." && pwd)"; set -a; . "$root/.env"; set +a; (cd "$root/backend" && npm run seed)
+root="$(cd "$(dirname "$0")/.." && pwd)"; set -a; . "$root/.env"; set +a; case "${CONFIRM_DEMO_SEED:-}" in yes|YES) ;; *) echo "Set CONFIRM_DEMO_SEED=yes" >&2; exit 1 ;; esac; (cd "$root/backend" && npm run seed)
