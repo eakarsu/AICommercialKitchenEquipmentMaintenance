@@ -34,8 +34,8 @@ export default function Login({ onLogin }) {
   };
 
   const handleQuickLogin = () => {
-    setEmail('admin@kitchen.com');
-    setPassword('admin123');
+    setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
+    setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
     // Submit on next tick so state is updated
     setTimeout(() => {
       document.getElementById('login-form').requestSubmit();
