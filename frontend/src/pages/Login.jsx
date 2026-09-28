@@ -36,10 +36,6 @@ export default function Login({ onLogin }) {
   const handleQuickLogin = () => {
     setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
     setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
-    // Submit on next tick so state is updated
-    setTimeout(() => {
-      document.getElementById('login-form').requestSubmit();
-    }, 50);
   };
 
   return (
@@ -167,7 +163,7 @@ export default function Login({ onLogin }) {
             className="w-full py-3 px-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 font-medium text-sm hover:bg-slate-800 hover:border-slate-600/50 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
           >
             <HiBolt className="text-amber-400 text-lg" />
-            Quick Login (Demo)
+            Auto Fill Demo Credentials
           </button>
 
           {/* Footer */}

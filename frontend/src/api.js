@@ -15,7 +15,7 @@ async function request(path, options = {}) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
+  return Array.isArray(data?.data) ? data.data : data;
 }
 
 export const api = {
