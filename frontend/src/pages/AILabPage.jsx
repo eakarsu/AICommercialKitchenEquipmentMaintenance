@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import AIResponseDisplay from '../components/AIResponseDisplay';
+import AIPresetButtons from '../components/AIPresetButtons';
 import toast from 'react-hot-toast';
 import {
   HiSparkles,
@@ -17,6 +18,52 @@ import {
   HiVideoCamera,
   HiExclamationTriangle,
 } from 'react-icons/hi2';
+
+const fmeaPresets = [
+  { label: 'Fryer over-temp', values: { equipmentType: 'Four-well commercial fryer', failure: 'Well #3 runs 8°F above setpoint and intermittently triggers the high-temperature alarm during dinner service.' } },
+  { label: 'Mixer gearbox', values: { equipmentType: '60-quart planetary mixer', failure: 'Grinding occurs only at speed 2 under load; vibration is increasing and the unit is outside warranty.' } },
+  { label: 'Freezer failure', values: { equipmentType: 'Two-door reach-in freezer', failure: 'Compressor will not start, cabinet temperature is rising, and the start winding tests open.' } },
+];
+const partsPresets = [
+  { label: 'Refrigeration parts', values: JSON.stringify([{ part_number: 'TL-COMP-2201', name: 'Reach-in compressor', category: 'Compressors', manufacturer: 'Traulsen' }, { part_number: 'KP-GK-3678', name: 'Walk-in door gasket', category: 'Gaskets', manufacturer: 'Kolpak' }], null, 2) },
+  { label: 'Cooking parts', values: JSON.stringify([{ part_number: 'PT-TH-55R', name: 'Fryer thermostat assembly', category: 'Controls', manufacturer: 'Pitco' }, { part_number: 'VL-TC-972', name: 'Griddle thermocouple', category: 'Controls', manufacturer: 'Vulcan' }], null, 2) },
+  { label: 'Sanitation parts', values: JSON.stringify([{ part_number: 'HB-WA-44U', name: 'Upper wash arm', category: 'Wash components', manufacturer: 'Hobart' }, { part_number: 'EV-4CB5S', name: 'Water filter', category: 'Filtration', manufacturer: 'Everpure' }], null, 2) },
+];
+const timeframePresets = [
+  { label: 'Last month', values: 'last_month' },
+  { label: 'Last quarter', values: 'last_quarter' },
+  { label: 'Last year', values: 'last_year' },
+];
+const technicianPresets = [
+  { label: 'Freezer outage', values: 'Dispatch a refrigeration-certified technician to the failed reach-in freezer today. Parts include a compressor with a 10-day lead time; food has been relocated; after-hours service is approved.' },
+  { label: 'Cooking line', values: 'Assign the fryer thermostat calibration and oven temperature-variance work while preserving lunch service. Require gas-equipment and controls experience plus lockout/tagout evidence.' },
+  { label: 'PM route', values: 'Build a one-day preventive-maintenance route for the dishwasher, ice machine, slicer, and hood. Minimize travel, honor certifications, and keep each technician below maximum workload.' },
+];
+const remotePresets = [
+  { label: 'Ice machine', values: { equipmentType: 'Manitowoc air-cooled ice machine', symptoms: 'Production is about 30% low; inlet flow is weak; evaporator plates show light scale.', query: 'Guide an on-site manager through safe observations and readings before dispatching a technician.' } },
+  { label: 'Combi oven', values: { equipmentType: 'Rational combi oven', symptoms: 'Steam generation takes three times longer than normal and two descale cycles were deferred.', query: 'Provide remote triage steps, stop conditions, required PPE, and evidence to capture for the service technician.' } },
+  { label: 'Walk-in cooler', values: { equipmentType: 'Walk-in refrigerator', symptoms: 'Evaporator fan squeals after defrost and cabinet temperature briefly rises to 43°F.', query: 'Create a safe remote diagnostic sequence and food-safety containment plan without asking staff to remove electrical panels.' } },
+];
+const vendorPresets = [
+  { label: 'Compressor repair', values: { equipmentType: 'Traulsen reach-in freezer', scope: 'Replace failed compressor, evacuate and recharge system, verify leak-free operation, and document pull-down performance.', budget: '$2,200 maximum including labor, refrigerant, and expedited freight' } },
+  { label: 'Hood inspection', values: { equipmentType: 'Type I exhaust hood and Ansul system', scope: 'Complete NFPA 96 inspection, deep-clean ductwork, document deficiencies, and schedule work outside service hours.', budget: '$3,500 maximum with certificates and photo evidence' } },
+  { label: 'Mixer rebuild', values: { equipmentType: 'Hobart 60-quart mixer', scope: 'Diagnose speed-2 grinding, quote gearbox rebuild versus replacement, and provide warranty and downtime options.', budget: '$1,800 maximum pending teardown approval' } },
+];
+const reportTypePresets = [
+  { label: 'Coverage', values: 'compliance_status' },
+  { label: 'Cost forecast', values: 'cost_analysis' },
+  { label: 'Asset health', values: 'equipment_health' },
+];
+const historyPresets = [
+  { label: 'Maintenance', values: 'maintenance_summary' },
+  { label: 'Cost trends', values: 'cost_analysis' },
+  { label: 'Health trends', values: 'equipment_health' },
+];
+const statusPresets = [
+  { label: 'Open', values: 'open' },
+  { label: 'In progress', values: 'in_progress' },
+  { label: 'Completed', values: 'completed' },
+];
 
 const inputClass = 'w-full rounded-xl bg-slate-900/60 border border-slate-600/50 text-slate-200 placeholder-slate-500 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/50 transition-all';
 const selectClass = 'w-full rounded-xl bg-slate-900/60 border border-slate-600/50 text-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/50 transition-all appearance-none cursor-pointer';
@@ -77,6 +124,12 @@ export default function AILabPage() {
       }
     })();
   }, []);
+
+  const selectedEquipmentPresets = equipmentList.filter((equipment) => equipment.id != null).slice(0, 3).map((equipment) => ({
+    label: `#${equipment.id} ${equipment.name}`,
+    values: String(equipment.id),
+  }));
+  const idListPresets = selectedEquipmentPresets;
 
   // FMEA
   const [fmeaEquipType, setFmeaEquipType] = useState('');
@@ -426,6 +479,15 @@ export default function AILabPage() {
             value={fmeaFailure}
             onChange={e => setFmeaFailure(e.target.value)}
           />
+          <AIPresetButtons
+            presets={fmeaPresets}
+            disabled={fmeaLoading}
+            onSelect={({ equipmentType, failure }) => {
+              setFmeaEquipType(equipmentType);
+              setFmeaFailure(failure);
+              setFmeaResult(null);
+            }}
+          />
           <button className={btnClass} onClick={runFMEA} disabled={fmeaLoading}>
             <HiSparkles /> Run FMEA
           </button>
@@ -448,6 +510,7 @@ export default function AILabPage() {
             onChange={e => setObsPartsText(e.target.value)}
           />
           <p className="text-xs text-slate-500">Empty = analyze first 10 parts from inventory ({partsList.length} loaded)</p>
+          <AIPresetButtons presets={partsPresets} disabled={obsLoading} onSelect={(value) => { setObsPartsText(value); setObsResult(null); }} />
           <button className={btnClass} onClick={runObsolescence} disabled={obsLoading}>
             <HiSparkles /> Detect Obsolescence
           </button>
@@ -468,6 +531,8 @@ export default function AILabPage() {
               <option key={e.id} value={e.id}>#{e.id} {e.name} ({e.type})</option>
             ))}
           </select>
+          <AIPresetButtons presets={selectedEquipmentPresets} disabled={complianceLoading || !selectedEquipmentPresets.length} onSelect={(value) => { setComplianceEquipId(value); setComplianceResult(null); }} />
+          {selectedEquipmentPresets.length < 2 && <p className="text-xs text-slate-400">At least two equipment records are required for multiple record-specific examples.</p>}
           <button className={btnClass} onClick={runCompliance} disabled={complianceLoading}>
             <HiSparkles /> Run Compliance Check
           </button>
@@ -488,6 +553,8 @@ export default function AILabPage() {
             value={predEquip}
             onChange={e => setPredEquip(e.target.value)}
           />
+          <AIPresetButtons presets={idListPresets} disabled={predLoading} onSelect={(value) => { setPredEquip(value); setPredResult(null); }} />
+          {idListPresets.length < 2 && <p className="text-xs text-slate-400">At least two equipment records are required for multiple record-specific examples.</p>}
           <button className={btnClass} onClick={runPredictive} disabled={predLoading}>
             <HiSparkles /> Predict Failures
           </button>
@@ -507,6 +574,7 @@ export default function AILabPage() {
             <option value="last_quarter">Last Quarter</option>
             <option value="last_year">Last Year</option>
           </select>
+          <AIPresetButtons presets={timeframePresets} disabled={autoOrderLoading} onSelect={(value) => { setAutoOrderTimeframe(value); setAutoOrderResult(null); }} />
           <button className={btnClass} onClick={runAutoOrder} disabled={autoOrderLoading}>
             <HiSparkles /> Generate Reorder Plan
           </button>
@@ -528,6 +596,7 @@ export default function AILabPage() {
             value={techQuery}
             onChange={e => setTechQuery(e.target.value)}
           />
+          <AIPresetButtons presets={technicianPresets} disabled={techLoading} onSelect={(value) => { setTechQuery(value); setTechResult(null); }} />
           <button className={btnClass} onClick={runTechOptimizer} disabled={techLoading}>
             <HiSparkles /> Optimize Assignment
           </button>
@@ -548,6 +617,8 @@ export default function AILabPage() {
               <option key={e.id} value={e.id}>#{e.id} {e.name}</option>
             ))}
           </select>
+          <AIPresetButtons presets={selectedEquipmentPresets} disabled={energyLoading || !selectedEquipmentPresets.length} onSelect={(value) => { setEnergyEquipId(value); setEnergyResult(null); }} />
+          {selectedEquipmentPresets.length < 2 && <p className="text-xs text-slate-400">At least two equipment records are required for multiple record-specific examples.</p>}
           <button className={btnClass} onClick={runEnergy} disabled={energyLoading}>
             <HiSparkles /> Analyze Energy
           </button>
@@ -567,6 +638,7 @@ export default function AILabPage() {
             <option value="cost_analysis">Claim Cost Forecast</option>
             <option value="equipment_health">Equipment Coverage Health</option>
           </select>
+          <AIPresetButtons presets={reportTypePresets} disabled={warrantyLoading} onSelect={(value) => { setWarrantyType(value); setWarrantyResult(null); }} />
           <button className={btnClass} onClick={runWarranty} disabled={warrantyLoading}>
             <HiSparkles /> Generate Warranty Report
           </button>
@@ -586,6 +658,7 @@ export default function AILabPage() {
             <option value="cost_analysis">Cost Trends</option>
             <option value="equipment_health">Equipment Health Trends</option>
           </select>
+          <AIPresetButtons presets={historyPresets} disabled={historyLoading} onSelect={(value) => { setHistoryType(value); setHistoryResult(null); }} />
           <button className={btnClass} onClick={runHistory} disabled={historyLoading}>
             <HiSparkles /> Generate Dashboard
           </button>
@@ -606,6 +679,8 @@ export default function AILabPage() {
               <option key={e.id} value={e.id}>#{e.id} {e.name}</option>
             ))}
           </select>
+          <AIPresetButtons presets={selectedEquipmentPresets} disabled={auditLoading || !selectedEquipmentPresets.length} onSelect={(value) => { setAuditEquipId(value); setAuditResult(null); }} />
+          {selectedEquipmentPresets.length < 2 && <p className="text-xs text-slate-400">At least two equipment records are required for multiple record-specific examples.</p>}
           <button className={btnClass} onClick={runAudit} disabled={auditLoading}>
             <HiSparkles /> Generate Audit Pack
           </button>
@@ -640,6 +715,16 @@ export default function AILabPage() {
             value={remoteQuery}
             onChange={e => setRemoteQuery(e.target.value)}
           />
+          <AIPresetButtons
+            presets={remotePresets}
+            disabled={remoteLoading}
+            onSelect={({ equipmentType, symptoms, query }) => {
+              setRemoteEquipType(equipmentType);
+              setRemoteSymptoms(symptoms);
+              setRemoteQuery(query);
+              setRemoteResult(null);
+            }}
+          />
           <button className={btnClass} onClick={runRemote} disabled={remoteLoading}>
             <HiSparkles /> Get Remote Guidance
           </button>
@@ -661,6 +746,7 @@ export default function AILabPage() {
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
+          <AIPresetButtons presets={statusPresets} disabled={woSumLoading} onSelect={(value) => { setWoSumStatus(value); setWoSumResult(null); }} />
           <button className={btnClass} onClick={runWoSummarizer} disabled={woSumLoading}>
             <HiSparkles /> Summarize Work Orders
           </button>
@@ -693,6 +779,16 @@ export default function AILabPage() {
             placeholder="Budget ceiling (optional)"
             value={vendorBudget}
             onChange={e => setVendorBudget(e.target.value)}
+          />
+          <AIPresetButtons
+            presets={vendorPresets}
+            disabled={vendorLoading}
+            onSelect={({ equipmentType, scope, budget }) => {
+              setVendorEquipType(equipmentType);
+              setVendorScope(scope);
+              setVendorBudget(budget);
+              setVendorResult(null);
+            }}
           />
           <button className={btnClass} onClick={runVendorAdvisor} disabled={vendorLoading}>
             <HiSparkles /> Recommend Vendors

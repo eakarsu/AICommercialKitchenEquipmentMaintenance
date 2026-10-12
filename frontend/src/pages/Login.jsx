@@ -34,8 +34,15 @@ export default function Login({ onLogin }) {
   };
 
   const handleQuickLogin = () => {
-    setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
-    setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
+    const demoEmail = import.meta.env.VITE_DEMO_EMAIL;
+    const demoPassword = import.meta.env.VITE_DEMO_PASSWORD;
+    if (!demoEmail || !demoPassword) {
+      setError('Demo credentials are not configured for this app. Ask an administrator for access.');
+      return;
+    }
+    setError('');
+    setEmail(demoEmail);
+    setPassword(demoPassword);
   };
 
   return (
@@ -163,7 +170,7 @@ export default function Login({ onLogin }) {
             className="w-full py-3 px-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 font-medium text-sm hover:bg-slate-800 hover:border-slate-600/50 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
           >
             <HiBolt className="text-amber-400 text-lg" />
-            Auto Fill Demo Credentials
+            Fill Demo Credentials
           </button>
 
           {/* Footer */}

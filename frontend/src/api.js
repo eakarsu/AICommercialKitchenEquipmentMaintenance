@@ -18,6 +18,12 @@ async function request(path, options = {}) {
   return Array.isArray(data?.data) ? data.data : data;
 }
 
+async function requestList(path) {
+  const rows = await request(path);
+  if (!Array.isArray(rows)) throw new Error(`Invalid list response from ${path}: expected an array`);
+  return rows;
+}
+
 export const api = {
   // Auth
   login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
@@ -25,7 +31,7 @@ export const api = {
   getMe: () => request('/auth/me'),
 
   // Equipment
-  getEquipment: () => request('/equipment'),
+  getEquipment: () => requestList('/equipment'),
   getEquipmentById: (id) => request(`/equipment/${id}`),
   createEquipment: (data) => request('/equipment', { method: 'POST', body: JSON.stringify(data) }),
   updateEquipment: (id, data) => request(`/equipment/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -33,7 +39,7 @@ export const api = {
   aiAnalyzeEquipment: (id) => request(`/equipment/${id}/ai-analyze`, { method: 'POST' }),
 
   // Maintenance
-  getMaintenance: () => request('/maintenance'),
+  getMaintenance: () => requestList('/maintenance'),
   getMaintenanceById: (id) => request(`/maintenance/${id}`),
   createMaintenance: (data) => request('/maintenance', { method: 'POST', body: JSON.stringify(data) }),
   updateMaintenance: (id, data) => request(`/maintenance/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -41,7 +47,7 @@ export const api = {
   aiPredictMaintenance: (id) => request(`/maintenance/${id}/ai-predict`, { method: 'POST' }),
 
   // Work Orders
-  getWorkOrders: () => request('/work-orders'),
+  getWorkOrders: () => requestList('/work-orders'),
   getWorkOrderById: (id) => request(`/work-orders/${id}`),
   createWorkOrder: (data) => request('/work-orders', { method: 'POST', body: JSON.stringify(data) }),
   updateWorkOrder: (id, data) => request(`/work-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -49,7 +55,7 @@ export const api = {
   aiPrioritizeWorkOrder: (id) => request(`/work-orders/${id}/ai-prioritize`, { method: 'POST' }),
 
   // Parts
-  getParts: () => request('/parts'),
+  getParts: () => requestList('/parts'),
   getPartById: (id) => request(`/parts/${id}`),
   createPart: (data) => request('/parts', { method: 'POST', body: JSON.stringify(data) }),
   updatePart: (id, data) => request(`/parts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -57,7 +63,7 @@ export const api = {
   aiReorderPart: (id) => request(`/parts/${id}/ai-reorder`, { method: 'POST' }),
 
   // Diagnostics
-  getDiagnostics: () => request('/diagnostics'),
+  getDiagnostics: () => requestList('/diagnostics'),
   getDiagnosticById: (id) => request(`/diagnostics/${id}`),
   createDiagnostic: (data) => request('/diagnostics', { method: 'POST', body: JSON.stringify(data) }),
   updateDiagnostic: (id, data) => request(`/diagnostics/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -65,7 +71,7 @@ export const api = {
   aiDiagnose: (id) => request(`/diagnostics/${id}/ai-diagnose`, { method: 'POST' }),
 
   // Compliance
-  getCompliance: () => request('/compliance'),
+  getCompliance: () => requestList('/compliance'),
   getComplianceById: (id) => request(`/compliance/${id}`),
   createCompliance: (data) => request('/compliance', { method: 'POST', body: JSON.stringify(data) }),
   updateCompliance: (id, data) => request(`/compliance/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -73,7 +79,7 @@ export const api = {
   aiCheckCompliance: (id) => request(`/compliance/${id}/ai-check`, { method: 'POST' }),
 
   // Vendors
-  getVendors: () => request('/vendors'),
+  getVendors: () => requestList('/vendors'),
   getVendorById: (id) => request(`/vendors/${id}`),
   createVendor: (data) => request('/vendors', { method: 'POST', body: JSON.stringify(data) }),
   updateVendor: (id, data) => request(`/vendors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -81,7 +87,7 @@ export const api = {
   aiEvaluateVendor: (id) => request(`/vendors/${id}/ai-evaluate`, { method: 'POST' }),
 
   // Energy
-  getEnergy: () => request('/energy'),
+  getEnergy: () => requestList('/energy'),
   getEnergyById: (id) => request(`/energy/${id}`),
   createEnergy: (data) => request('/energy', { method: 'POST', body: JSON.stringify(data) }),
   updateEnergy: (id, data) => request(`/energy/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -89,7 +95,7 @@ export const api = {
   aiOptimizeEnergy: (id) => request(`/energy/${id}/ai-optimize`, { method: 'POST' }),
 
   // Costs
-  getCosts: () => request('/costs'),
+  getCosts: () => requestList('/costs'),
   getCostById: (id) => request(`/costs/${id}`),
   createCost: (data) => request('/costs', { method: 'POST', body: JSON.stringify(data) }),
   updateCost: (id, data) => request(`/costs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -97,7 +103,7 @@ export const api = {
   aiAnalyzeCosts: () => request('/costs/ai-analyze', { method: 'POST' }),
 
   // Technicians
-  getTechnicians: () => request('/technicians'),
+  getTechnicians: () => requestList('/technicians'),
   getTechnicianById: (id) => request(`/technicians/${id}`),
   createTechnician: (data) => request('/technicians', { method: 'POST', body: JSON.stringify(data) }),
   updateTechnician: (id, data) => request(`/technicians/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -130,7 +136,7 @@ export const api = {
   aiPartsTriage: (data) => request('/ai/parts-triage', { method: 'POST', body: JSON.stringify(data) }),
 
   // Notifications
-  getNotifications: () => request('/notifications'),
+  getNotifications: () => requestList('/notifications'),
   getNotificationsUnreadCount: () => request('/notifications/unread-count'),
   createNotification: (data) => request('/notifications', { method: 'POST', body: JSON.stringify(data) }),
   markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'PUT' }),
@@ -138,7 +144,7 @@ export const api = {
   deleteNotification: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
 
   // Webhooks
-  getWebhooks: () => request('/webhooks'),
+  getWebhooks: () => requestList('/webhooks'),
   createWebhook: (data) => request('/webhooks', { method: 'POST', body: JSON.stringify(data) }),
   deleteWebhook: (id) => request(`/webhooks/${id}`, { method: 'DELETE' }),
   testWebhook: (id, payload) => request(`/webhooks/${id}/test`, { method: 'POST', body: JSON.stringify(payload || { event: 'test', payload: { hello: 'world' } }) }),

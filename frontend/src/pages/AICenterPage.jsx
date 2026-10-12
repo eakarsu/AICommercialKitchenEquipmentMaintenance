@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../api';
 import AIResponseDisplay from '../components/AIResponseDisplay';
+import AIPresetButtons from '../components/AIPresetButtons';
 import toast from 'react-hot-toast';
 import {
   HiSparkles,
@@ -12,6 +13,27 @@ import {
   HiDocumentText,
   HiChatBubbleLeftRight,
 } from 'react-icons/hi2';
+
+const diagnosticPresets = [
+  { label: 'Freezer fault', values: { equipmentType: 'Walk-in freezer', symptoms: 'Cabinet temperature rose from -5°F to 18°F in four hours; compressor is silent; condenser fan is running.', query: 'Diagnose the likely causes, list safe checks in order, identify stop-work conditions, and recommend the parts and technician skills required.' } },
+  { label: 'Oven heating', values: { equipmentType: 'Commercial convection oven', symptoms: 'Upper deck runs 25°F above setpoint and products brown unevenly on the left side.', query: 'Create a diagnostic plan that separates calibration drift, sensor failure, airflow restriction, and control-board faults. Include verification readings.' } },
+  { label: 'Dishwasher issue', values: { equipmentType: 'High-temperature conveyor dishwasher', symptoms: 'Final rinse reaches only 166°F, pressure fluctuates, and glassware has visible film after the cycle.', query: 'Assess food-safety risk, likely mechanical or water-quality causes, immediate containment, and a prioritized repair checklist.' } },
+];
+const costPresets = [
+  { label: 'Monthly review', values: 'last_month' },
+  { label: 'Quarterly review', values: 'last_quarter' },
+  { label: 'Annual review', values: 'last_year' },
+];
+const reportPresets = [
+  { label: 'Maintenance', values: { type: 'maintenance_summary', range: 'last_month' } },
+  { label: 'Cost review', values: { type: 'cost_analysis', range: 'last_quarter' } },
+  { label: 'Equipment health', values: { type: 'equipment_health', range: 'last_year' } },
+];
+const chatPresets = [
+  { label: 'PM checklist', values: 'Create a weekly preventive-maintenance checklist for our walk-in refrigeration, fryers, dish machine, and exhaust hood. Include owners, evidence to record, and escalation thresholds.' },
+  { label: 'Downtime plan', values: 'Prioritize today’s response to a failed reach-in freezer, an overheating fryer well, and a mixer gearbox noise. Explain food-safety containment and technician sequencing.' },
+  { label: 'Parts strategy', values: 'Recommend a 90-day critical-spares strategy using failure impact, lead time, current stock, and equipment compatibility. State assumptions and approval points.' },
+];
 
 function LoadingSpinner() {
   return (
@@ -65,6 +87,18 @@ function FeatureCard({ icon: Icon, title, description, accentFrom, accentTo, bor
 }
 
 export default function AICenterPage() {
+  const [equipmentList, setEquipmentList] = useState([]);
+  useEffect(() => {
+    let active = true;
+    api.getEquipment().then((items) => {
+      if (active) setEquipmentList(Array.isArray(items) ? items : items.data || []);
+    }).catch(() => { /* Record-backed examples remain unavailable until equipment loads. */ });
+    return () => { active = false; };
+  }, []);
+  const equipmentPresets = equipmentList.filter((item) => item.id != null).slice(0, 3).map((item) => ({
+    label: item.name || `Equipment ${item.id}`, values: String(item.id),
+  }));
+  const predictivePresets = equipmentPresets;
   // Diagnostic Assistant
   const [diagEquipType, setDiagEquipType] = useState('');
   const [diagSymptoms, setDiagSymptoms] = useState('');
@@ -292,6 +326,16 @@ export default function AICenterPage() {
             value={diagQuery}
             onChange={e => setDiagQuery(e.target.value)}
           />
+          <AIPresetButtons
+            presets={diagnosticPresets}
+            disabled={diagLoading}
+            onSelect={({ equipmentType, symptoms, query }) => {
+              setDiagEquipType(equipmentType);
+              setDiagSymptoms(symptoms);
+              setDiagQuery(query);
+              setDiagResult(null);
+            }}
+          />
           <button className={btnAiClass} onClick={handleDiagnostic} disabled={diagLoading}>
             <HiSparkles className="text-base" />
             Run Diagnostic
@@ -317,6 +361,8 @@ export default function AICenterPage() {
             onChange={e => setPredIds(e.target.value)}
           />
           <p className="text-xs text-slate-500">Leave empty to analyze all equipment</p>
+          <AIPresetButtons presets={predictivePresets} disabled={predLoading} onSelect={(value) => { setPredIds(value); setPredResult(null); }} />
+          {predictivePresets.length < 2 && <p className="text-xs text-slate-400">At least two equipment records are required for multiple record-specific examples.</p>}
           <button className={btnAiClass} onClick={handlePredictive} disabled={predLoading}>
             <HiSparkles className="text-base" />
             Run Analysis
@@ -347,6 +393,7 @@ export default function AICenterPage() {
               <option value="all_time">All Time</option>
             </select>
           </label>
+          <AIPresetButtons presets={costPresets} disabled={costLoading} onSelect={(value) => { setCostTimeframe(value); setCostResult(null); }} />
           <button className={btnAiClass} onClick={handleCostOptimizer} disabled={costLoading}>
             <HiSparkles className="text-base" />
             Run Analysis
@@ -374,6 +421,8 @@ export default function AICenterPage() {
             value={compEquipId}
             onChange={e => setCompEquipId(e.target.value)}
           />
+          <AIPresetButtons presets={equipmentPresets} disabled={compLoading} onSelect={(value) => { setCompEquipId(value); setCompResult(null); }} />
+          {equipmentPresets.length < 2 && <p className="text-xs text-slate-400">At least two equipment records are required for multiple record-specific examples.</p>}
           <button className={btnAiClass} onClick={handleCompliance} disabled={compLoading}>
             <HiSparkles className="text-base" />
             Run Analysis
@@ -398,6 +447,8 @@ export default function AICenterPage() {
             value={energyEquipId}
             onChange={e => setEnergyEquipId(e.target.value)}
           />
+          <AIPresetButtons presets={equipmentPresets} disabled={energyLoading} onSelect={(value) => { setEnergyEquipId(value); setEnergyResult(null); }} />
+          {equipmentPresets.length < 2 && <p className="text-xs text-slate-400">At least two equipment records are required for multiple record-specific examples.</p>}
           <button className={btnAiClass} onClick={handleEnergy} disabled={energyLoading}>
             <HiSparkles className="text-base" />
             Run Analysis
@@ -442,6 +493,15 @@ export default function AICenterPage() {
               <option value="last_year">Last Year</option>
             </select>
           </label>
+          <AIPresetButtons
+            presets={reportPresets}
+            disabled={reportLoading}
+            onSelect={({ type, range }) => {
+              setReportType(type);
+              setReportRange(range);
+              setReportResult(null);
+            }}
+          />
           <button className={btnAiClass} onClick={handleReport} disabled={reportLoading}>
             <HiSparkles className="text-base" />
             Generate Report
@@ -525,7 +585,8 @@ export default function AICenterPage() {
           </div>
 
           {/* Chat input */}
-          <form onSubmit={handleChat} className="flex gap-3">
+          <AIPresetButtons presets={chatPresets} disabled={chatLoading} onSelect={(value) => setChatMessage(value)} />
+          <form onSubmit={handleChat} className="flex gap-3 mt-3">
             <input
               type="text"
               className={`${inputClass} flex-1`}

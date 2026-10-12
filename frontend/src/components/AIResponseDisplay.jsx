@@ -30,6 +30,37 @@ function formatKey(key) {
     .trim();
 }
 
+function parseResponse(value) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim().replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i, '$1');
+  if (!/^(?:\{|\[)/.test(trimmed)) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {
+    return value;
+  }
+}
+
+function ObjectTable({ rows }) {
+  const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-700/50">
+      <table className="min-w-full divide-y divide-slate-700/50 text-left text-xs">
+        <thead className="bg-slate-900/60">
+          <tr>{keys.map((key) => <th key={key} className="px-3 py-2 font-semibold uppercase tracking-wider text-violet-300">{formatKey(key)}</th>)}</tr>
+        </thead>
+        <tbody className="divide-y divide-slate-700/40">
+          {rows.map((row, index) => (
+            <tr key={index} className="bg-slate-800/30">
+              {keys.map((key) => <td key={key} className="px-3 py-2 align-top text-slate-300">{row[key] == null ? '—' : typeof row[key] === 'object' ? renderObjectResponse(row[key]) : String(row[key])}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function MetricCard({ label, value, keyName }) {
   const colors = getMetricColor(keyName);
   const numVal = typeof value === 'number' ? value : parseFloat(value);
@@ -62,7 +93,9 @@ function RecommendationCard({ label, value }) {
         {items.map((item, i) => (
           <div key={i} className="flex items-start gap-2">
             <span className="text-amber-400/60 mt-0.5">&#8226;</span>
-            <p className="text-sm text-slate-300">{typeof item === 'object' ? JSON.stringify(item) : String(item)}</p>
+            {typeof item === 'object'
+              ? <div className="min-w-0 flex-1">{renderObjectResponse(item)}</div>
+              : <p className="text-sm text-slate-300">{String(item)}</p>}
           </div>
         ))}
       </div>
@@ -82,7 +115,9 @@ function WarningCard({ label, value }) {
         {items.map((item, i) => (
           <div key={i} className="flex items-start gap-2">
             <span className="text-red-400/60 mt-0.5">&#8226;</span>
-            <p className="text-sm text-slate-300">{typeof item === 'object' ? JSON.stringify(item) : String(item)}</p>
+            {typeof item === 'object'
+              ? <div className="min-w-0 flex-1">{renderObjectResponse(item)}</div>
+              : <p className="text-sm text-slate-300">{String(item)}</p>}
           </div>
         ))}
       </div>
@@ -91,7 +126,8 @@ function WarningCard({ label, value }) {
 }
 
 function renderStringResponse(text) {
-  if (!text) return null;
+  if (text === '') return <span className="text-slate-400">Empty string</span>;
+  if (text === null || text === undefined) return null;
   const lines = text.split('\n');
   const elements = [];
   let currentParagraph = [];
@@ -277,19 +313,22 @@ function RenderValue({ label, value }) {
 
   // Array
   if (Array.isArray(value)) {
+    const isTable = value.length > 0 && value.every((item) => item && typeof item === 'object' && !Array.isArray(item));
     return (
       <div className="rounded-lg bg-slate-800/30 border border-slate-700/40 p-3">
         <p className="text-xs font-medium text-violet-400 uppercase tracking-wider mb-2">{label}</p>
-        <div className="space-y-1.5">
-          {value.map((item, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <span className="text-violet-400/70 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
-              <div className="text-sm text-slate-300">
-                {typeof item === 'object' ? renderObjectResponse(item) : String(item)}
+        {isTable ? <ObjectTable rows={value} /> : (
+          <div className="space-y-1.5">
+            {value.map((item, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-violet-400/70 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
+                <div className="text-sm text-slate-300">
+                  {typeof item === 'object' ? renderObjectResponse(item) : String(item)}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -331,7 +370,7 @@ export default function AIResponseDisplay({ result }) {
     );
   }
 
-  const response = result.response;
+  const response = parseResponse(result.response);
   const isString = typeof response === 'string';
 
   return (
@@ -356,7 +395,7 @@ export default function AIResponseDisplay({ result }) {
 
       {/* Body */}
       <div className="p-5">
-        {isString ? renderStringResponse(response) : renderObjectResponse(response)}
+        {isString ? renderStringResponse(response) : Array.isArray(response) ? <RenderValue label="Results" value={response} /> : renderObjectResponse(response)}
       </div>
 
       {/* Usage footer */}
