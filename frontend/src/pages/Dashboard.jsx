@@ -1,3 +1,4 @@
+import DetailModal from '../components/DetailModal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -77,6 +78,7 @@ export default function Dashboard() {
   const [parts, setParts] = useState([]);
   const [diagnostics, setDiagnostics] = useState([]);
   const [technicians, setTechnicians] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -310,7 +312,7 @@ export default function Dashboard() {
               Recent Work Orders
             </h2>
             <button
-              onClick={() => navigate('/work-orders')}
+              onClick={() => setSelectedItem(wo)} style={{ cursor: 'pointer' }}
               className="text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
             >
               View all <HiArrowRight className="h-4 w-4" />
@@ -362,7 +364,7 @@ export default function Dashboard() {
               Upcoming Maintenance
             </h2>
             <button
-              onClick={() => navigate('/maintenance')}
+              onClick={() => setSelectedItem(m)} style={{ cursor: 'pointer' }}
               className="text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
             >
               View all <HiArrowRight className="h-4 w-4" />
@@ -453,6 +455,7 @@ export default function Dashboard() {
           })}
         </div>
       </div>
+      <DetailModal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} title={selectedItem?.title || selectedItem?.equipment_name || 'Record Details'} item={selectedItem} onEdit={() => { const isWo = selectedItem?.priority !== undefined; setSelectedItem(null); navigate(isWo ? '/work-orders' : '/maintenance'); }} onDelete={() => setSelectedItem(null)} />
     </div>
   );
 }

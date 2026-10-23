@@ -1,3 +1,4 @@
+import DetailModal from '../components/DetailModal';
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '../api';
@@ -7,6 +8,7 @@ const emptyForm = { name: '', url: '', events: '', active: true };
 
 export default function WebhooksPage() {
   const [items, setItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -162,7 +164,7 @@ export default function WebhooksPage() {
             </thead>
             <tbody className="divide-y divide-slate-700/50">
               {items.map(w => (
-                <tr key={w.id} className="hover:bg-slate-800/30">
+                <tr key={w.id} onClick={() => setSelectedItem(w)} style={{ cursor: 'pointer' }} className="hover:bg-slate-800/30">
                   <td className="px-4 py-3 text-sm text-slate-200 font-medium">{w.name}</td>
                   <td className="px-4 py-3 text-sm text-slate-400 max-w-xs truncate">{w.url}</td>
                   <td className="px-4 py-3 text-sm text-slate-400">{Array.isArray(w.events) ? w.events.join(', ') : (w.events || '—')}</td>
@@ -191,6 +193,7 @@ export default function WebhooksPage() {
           </table>
         )}
       </div>
+      <DetailModal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} title={selectedItem?.name || 'Webhook Details'} item={selectedItem} onDelete={(id) => { handleDelete(id); setSelectedItem(null); }} />
     </div>
   );
 }

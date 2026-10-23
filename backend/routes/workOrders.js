@@ -25,16 +25,22 @@ router.get('/', async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query('SELECT COUNT(*) FROM work_orders');
+    const conditions=[]; const params=[];
+    if (req.query.status) { params.push(req.query.status); conditions.push(`wo.status = $${params.length}`); }
+    if (req.query.priority) { params.push(req.query.priority); conditions.push(`wo.priority = $${params.length}`); }
+    if (req.query.search) { params.push(`%${req.query.search}%`); conditions.push(`(wo.title ILIKE $${params.length} OR wo.description ILIKE $${params.length})`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const countResult = await pool.query(`SELECT COUNT(*) FROM work_orders wo ${where}`, params);
     const total = parseInt(countResult.rows[0].count);
-
+    params.push(limit, offset);
     const result = await pool.query(
       `SELECT wo.*, e.name AS equipment_name
        FROM work_orders wo
        LEFT JOIN equipment e ON wo.equipment_id = e.id
+       ${where}
        ORDER BY wo.created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
+       LIMIT $${params.length-1} OFFSET $${params.length}`,
+      params
     );
     res.json({
       data: result.rows,

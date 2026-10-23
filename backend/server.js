@@ -46,6 +46,7 @@ app.use('/api/oem-mmr-white-label', require('./routes/oemMmrWhiteLabel')); // ap
 // Advisory AI reports only; native execution and approval routes stay unchanged.
 const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
 const aiWorkspaceDatabase = require("./db.js");
+app.use('/api/wave30c', require('./routes/wave30cRoutes'));
 app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
   pool: aiWorkspaceDatabase, authenticateToken: require("./middleware/auth.js"),
   aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),

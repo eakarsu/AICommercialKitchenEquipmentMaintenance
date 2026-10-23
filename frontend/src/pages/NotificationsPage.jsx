@@ -1,3 +1,4 @@
+import DetailModal from '../components/DetailModal';
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '../api';
@@ -14,6 +15,7 @@ const emptyForm = { title: '', message: '', type: 'info', user_id: '' };
 
 export default function NotificationsPage() {
   const [items, setItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -166,7 +168,7 @@ export default function NotificationsPage() {
             </thead>
             <tbody className="divide-y divide-slate-700/50">
               {items.map(n => (
-                <tr key={n.id} className="hover:bg-slate-800/30">
+                <tr key={n.id} onClick={() => setSelectedItem(n)} style={{ cursor: 'pointer' }} className="hover:bg-slate-800/30">
                   <td className="px-4 py-3 text-sm text-slate-200 font-medium">{n.title}</td>
                   <td className="px-4 py-3 text-sm text-slate-400">{n.message}</td>
                   <td className="px-4 py-3">
@@ -198,6 +200,7 @@ export default function NotificationsPage() {
           </table>
         )}
       </div>
+      <DetailModal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} title={selectedItem?.title || 'Notification Details'} item={selectedItem} onDelete={(id) => { handleDelete(id); setSelectedItem(null); }} />
     </div>
   );
 }

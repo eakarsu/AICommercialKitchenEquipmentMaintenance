@@ -84,7 +84,7 @@ export default function DetailModal({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div role="dialog" aria-modal="true" className="relative bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 flex-shrink-0">
           <h2 className="text-lg font-semibold text-slate-100">{title || 'Details'}</h2>
@@ -100,7 +100,7 @@ export default function DetailModal({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Fields grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            {(fields || []).map(field => {
+            {(fields && fields.length ? fields : Object.keys(item).filter(k => !['id', '_id', 'created_at', 'updated_at'].includes(k)).map(k => ({ key: k, label: k.replace(/_/g, ' ') }))).map(field => {
               const value = item[field.key];
               const showBadge = isBadgeField(field.type, field.key);
 
@@ -128,24 +128,26 @@ export default function DetailModal({
         {/* Footer actions */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-700/50 flex-shrink-0 bg-slate-900/80">
           <div className="flex items-center gap-2">
-            {onEdit && (
-              <button
-                onClick={() => onEdit(item)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors text-sm font-medium"
-              >
-                <HiPencilSquare className="text-base" />
-                Edit
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={() => onDelete(item.id || item._id)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors text-sm font-medium"
-              >
-                <HiTrash className="text-base" />
-                Delete
-              </button>
-            )}
+            <button
+              onClick={() => onEdit ? onEdit(item) : onClose()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors text-sm font-medium"
+            >
+              <HiPencilSquare className="text-base" />
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete ? onDelete(item.id || item._id) : onClose()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors text-sm font-medium"
+            >
+              <HiTrash className="text-base" />
+              Delete
+            </button>
+            <button
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-700/50 text-slate-300 border border-slate-600/50 hover:bg-slate-700 transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
           </div>
 
           {onAI && (
